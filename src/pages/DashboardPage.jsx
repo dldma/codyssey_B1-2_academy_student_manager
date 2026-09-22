@@ -13,6 +13,7 @@ import EmptyState from '../components/EmptyState'
 import TodayMemoPanel from '../components/TodayMemoPanel'
 import CalendarPanel from '../components/CalendarPanel'
 import ExamSchedulePanel from '../components/ExamSchedulePanel'
+import WeekScheduleEditor from '../components/WeekScheduleEditor'
 
 function DashboardPage() {
   const navigate = useNavigate()
@@ -32,6 +33,9 @@ function DashboardPage() {
 
   const [selectedClass, setSelectedClass] =
     useState(null)
+
+  const [isWeekEditorOpen, setIsWeekEditorOpen] =
+    useState(false)
 
   const [isSubmitting, setIsSubmitting] =
     useState(false)
@@ -177,25 +181,42 @@ function DashboardPage() {
         <div
           style={{
             marginBottom: '25px',
+            display: 'flex',
+            alignItems: 'flex-start',
+            justifyContent: 'space-between',
+            gap: '16px',
+            flexWrap: 'wrap',
           }}
         >
-          <h1
-            style={{
-              marginBottom: '6px',
-            }}
-          >
-            대시보드
-          </h1>
+          <div>
+            <h1
+              style={{
+                marginBottom: '6px',
+              }}
+            >
+              대시보드
+            </h1>
 
-          <p
+            <p
+              style={{
+                margin: 0,
+                color: '#6b7280',
+              }}
+            >
+              오늘 학생과 학원 일정을 한눈에
+              확인하세요.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setIsWeekEditorOpen(true)}
             style={{
-              margin: 0,
-              color: '#6b7280',
+              background: '#4f46e5',
             }}
           >
-            오늘 학생과 학원 일정을 한눈에
-            확인하세요.
-          </p>
+            한 주 수정
+          </button>
         </div>
 
         {/* 위쪽 카드 */}
@@ -377,6 +398,20 @@ function DashboardPage() {
           </section>
         </div>
       </main>
+
+
+      {isWeekEditorOpen && (
+        <WeekScheduleEditor
+          students={students}
+          onClose={() => setIsWeekEditorOpen(false)}
+          onSaved={async () => {
+            await refetch()
+            setCalendarRefreshKey(
+              (current) => current + 1,
+            )
+          }}
+        />
+      )}
 
       {selectedClass && (
         <div

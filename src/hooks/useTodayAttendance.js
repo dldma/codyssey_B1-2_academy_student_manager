@@ -21,6 +21,8 @@ function useTodayAttendance() {
 
   const fetchTodayClasses = async () => {
     if (!user) {
+      setClasses([])
+      setIsLoading(false)
       return
     }
 
@@ -28,34 +30,21 @@ function useTodayAttendance() {
     setError(null)
 
     const today = getTodayString()
-    const weekday = new Date().getDay()
 
     const {
       data: schedules,
       error: scheduleError,
-    } = await supabase
-      .from('class_schedules')
-      .select(`
-        id,
-        student_id,
-        teacher_id,
-        weekday,
-        start_time,
-        end_time,
-        valid_from,
-        valid_to
-      `)
-      .eq('teacher_id', user.id)
-      .eq('weekday', weekday)
-      .lte('valid_from', today)
-      .or(`valid_to.is.null,valid_to.gte.${today}`)
-      .order('start_time', {
-        ascending: true,
-      })
+    } = await supabase.rpc(
+      'get_effective_today_schedule',
+      {
+        p_date: today,
+      },
+    )
 
     if (scheduleError) {
       console.error(scheduleError)
       setError(scheduleError.message)
+      setClasses([])
       setIsLoading(false)
       return
     }
@@ -66,83 +55,53 @@ function useTodayAttendance() {
       return
     }
 
-    const studentIds = [
-      ...new Set(
-        schedules.map(
-          (schedule) => schedule.student_id,
-        ),
-      ),
-    ]
-
     const scheduleIds = schedules.map(
-      (schedule) => schedule.id,
+      (schedule) => schedule.schedule_id,
     )
 
-    const [
-      studentsResult,
-      attendanceResult,
-    ] = await Promise.all([
-      supabase
-        .from('students')
-        .select(
-          'id, name, school, grade, status',
-        )
-        .in('id', studentIds),
-
-      supabase
+    const { data: attendance, error: attendanceError } =
+      await supabase
         .from('attendance')
         .select(
           'id, class_schedule_id, status, check_in_at, check_out_at',
         )
         .in('class_schedule_id', scheduleIds)
-        .eq('attendance_date', today),
-    ])
+        .eq('attendance_date', today)
 
-    if (studentsResult.error) {
-      console.error(studentsResult.error)
-      setError(studentsResult.error.message)
+    if (attendanceError) {
+      console.error(attendanceError)
+      setError(attendanceError.message)
+      setClasses([])
       setIsLoading(false)
       return
     }
 
-    if (attendanceResult.error) {
-      console.error(attendanceResult.error)
-      setError(attendanceResult.error.message)
-      setIsLoading(false)
-      return
-    }
-
-    const students =
-      studentsResult.data ?? []
-
-    const attendance =
-      attendanceResult.data ?? []
-
-    const merged = schedules
-      .map((schedule) => {
-        const student = students.find(
-          (item) =>
-            item.id === schedule.student_id,
-        )
-
-        const attendanceRecord =
-          attendance.find(
-            (item) =>
-              item.class_schedule_id ===
-              schedule.id,
-          )
-
-        return {
-          ...schedule,
-          student,
-          attendance:
-            attendanceRecord ?? null,
-        }
-      })
-      .filter(
+    const merged = schedules.map((schedule) => {
+      const attendanceRecord = (attendance ?? []).find(
         (item) =>
-          item.student?.status === 'active',
+          item.class_schedule_id ===
+          schedule.schedule_id,
       )
+
+      return {
+        id: schedule.schedule_id,
+        student_id: schedule.student_id,
+        teacher_id: schedule.teacher_id,
+        weekday: new Date(
+          `${today}T00:00:00`,
+        ).getDay(),
+        start_time: schedule.start_time,
+        end_time: schedule.end_time,
+        student: {
+          id: schedule.student_id,
+          name: schedule.student_name,
+          school: schedule.school,
+          grade: schedule.grade,
+          status: schedule.student_status,
+        },
+        attendance: attendanceRecord ?? null,
+      }
+    })
 
     setClasses(merged)
     setIsLoading(false)
