@@ -12,12 +12,14 @@ import AdminRoute from './components/AdminRoute'
 
 import LoginPage from './pages/LoginPage'
 import DashboardPage from './pages/DashboardPage'
+import StudentDetailPage from './pages/StudentDetailPage'
+
 import AdminPage from './pages/AdminPage'
 import AdminStudentsPage from './pages/AdminStudentsPage'
 import AdminStudentNewPage from './pages/AdminStudentNewPage'
 import AdminStudentDetailPage from './pages/AdminStudentDetailPage'
 
-import StudentDetailPage from './pages/StudentDetailPage'
+import NotFoundPage from './pages/NotFoundPage'
 
 function App() {
   return (
@@ -35,15 +37,6 @@ function App() {
           />
 
           <Route
-            path="/students/:id"
-            element={
-              <ProtectedRoute>
-                <StudentDetailPage />
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
             path="/login"
             element={<LoginPage />}
           />
@@ -53,6 +46,15 @@ function App() {
             element={
               <ProtectedRoute>
                 <DashboardPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/students/:id"
+            element={
+              <ProtectedRoute>
+                <StudentDetailPage />
               </ProtectedRoute>
             }
           />
@@ -99,6 +101,11 @@ function App() {
                 </AdminRoute>
               </ProtectedRoute>
             }
+          />
+
+          <Route
+            path="*"
+            element={<NotFoundPage />}
           />
         </Routes>
       </AuthProvider>
